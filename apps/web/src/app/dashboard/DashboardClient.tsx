@@ -18,7 +18,8 @@ import {
   X,
   Check,
   FileText,
-  Zap
+  Zap,
+  BarChart2
 } from 'lucide-react'
 import { logout } from '../login/actions'
 import { 
@@ -30,6 +31,7 @@ import {
 } from './actions'
 import { createNote } from './notes-actions'
 import NotesView from './NotesView'
+import OverviewDashboard from './OverviewDashboard'
 
 interface DashboardClientProps {
   user: User
@@ -53,7 +55,7 @@ export default function DashboardClient({
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(
     initialWorkspaces[0]?.id || ''
   )
-  const [currentView, setCurrentView] = useState<'tasks' | 'notes'>('tasks')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'tasks' | 'notes'>('dashboard')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all') // 'all' or specific projectId
   
   // Modals
@@ -106,6 +108,7 @@ export default function DashboardClient({
         setShowWorkspaceModal(false)
         setActiveWorkspaceId(res.workspace.id)
         setSelectedProjectId('all')
+        setCurrentView('dashboard')
       } else if (res.error) {
         alert(res.error)
       }
@@ -230,13 +233,8 @@ export default function DashboardClient({
     setEditingTask(task)
   }
 
-  // Dashboard Stats Calculations
-  const totalTasksCount = activeTasks.length
-  const pendingTasksCount = activeTasks.filter(t => t.status !== 'done').length
-  const completedTasksCount = activeTasks.filter(t => t.status === 'done').length
-
   return (
-    <div className="app-container">
+    <div className="app-container animate-fade-in">
       {/* Sidebar */}
       <aside className="sidebar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px' }}>
@@ -271,6 +269,7 @@ export default function DashboardClient({
                   onClick={() => {
                     setActiveWorkspaceId(ws.id)
                     setSelectedProjectId('all')
+                    setCurrentView('dashboard') // default to dashboard overview on switch
                   }}
                   className={`sidebar-item ${activeWorkspaceId === ws.id ? 'active' : ''}`}
                 >
@@ -289,11 +288,18 @@ export default function DashboardClient({
           <div style={{ padding: '0 4px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <button
+                onClick={() => setCurrentView('dashboard')}
+                className={`sidebar-item ${currentView === 'dashboard' ? 'active' : ''}`}
+              >
+                <BarChart2 size={15} />
+                <span>Overview</span>
+              </button>
+              <button
                 onClick={() => setCurrentView('tasks')}
                 className={`sidebar-item ${currentView === 'tasks' ? 'active' : ''}`}
               >
                 <CheckSquare size={15} />
-                <span>Tasks</span>
+                <span>Tasks ({activeTasks.length})</span>
               </button>
               <button
                 onClick={() => setCurrentView('notes')}
@@ -395,9 +401,9 @@ export default function DashboardClient({
         </header>
 
         {/* Inner Content Container */}
-        <div className="content-container animate-fade-in">
+        <div className="content-container animate-slide-up">
           {!activeWorkspaceId ? (
-            <div className="empty-state">
+            <div className="empty-state animate-slide-up">
               <AlertCircle size={40} style={{ color: 'var(--text-secondary)', marginBottom: '12px' }} />
               <h3>No workspace created yet</h3>
               <p>Create your first workspace to start organizing your projects and tasks.</p>
@@ -408,49 +414,28 @@ export default function DashboardClient({
             </div>
           ) : (
             <>
-              {currentView === 'tasks' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              {currentView === 'dashboard' && (
+                <OverviewDashboard 
+                  workspaceId={activeWorkspaceId}
+                  projects={activeProjects}
+                  tasks={activeTasks}
+                  notes={activeNotes}
+                  allWorkspaces={initialWorkspaces}
+                  allTasks={initialTasks}
+                  allProjects={initialProjects}
+                />
+              )}
+
+              {currentView === 'tasks' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }} className="animate-slide-up">
                   {/* Header Title Section (Notion Style) */}
                   <div>
                     <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '2.2rem' }}>
-                      📝 {activeWorkspace?.name}
+                      📝 {activeWorkspace?.name} Tasks
                     </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                       Manage workspace workflows, set priorities, and track execution.
                     </p>
-                  </div>
-
-                  {/* Stats Counters (Notion Style Widgets) */}
-                  <div className="stat-container">
-                    <div className="stat-widget">
-                      <div className="stat-icon">
-                        <Layers size={18} />
-                      </div>
-                      <div>
-                        <div className="stat-label">Projects</div>
-                        <div className="stat-value">{activeProjects.length}</div>
-                      </div>
-                    </div>
-
-                    <div className="stat-widget">
-                      <div className="stat-icon">
-                        <CheckSquare size={18} />
-                      </div>
-                      <div>
-                        <div className="stat-label">Active Tasks</div>
-                        <div className="stat-value">{pendingTasksCount} / {totalTasksCount}</div>
-                      </div>
-                    </div>
-
-                    <div className="stat-widget">
-                      <div className="stat-icon">
-                        <Check size={18} style={{ color: 'var(--color-success)' }} />
-                      </div>
-                      <div>
-                        <div className="stat-label">Completed</div>
-                        <div className="stat-value">{completedTasksCount}</div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Task list */}
@@ -571,8 +556,10 @@ export default function DashboardClient({
                     )}
                   </div>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              )}
+
+              {currentView === 'notes' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-slide-up">
                   {/* Header Title Section (Notion Style) */}
                   <div>
                     <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '2.2rem' }}>
@@ -597,13 +584,13 @@ export default function DashboardClient({
       </main>
 
       {/* ======================================= */}
-      {/* MODALS / OVERLAYS */}
+      {/* MODALS / OVERLAYS (Integrated with slide-up animations) */}
       {/* ======================================= */}
 
       {/* 1. Workspace Creator Modal */}
       {showWorkspaceModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="auth-card animate-fade-in" style={{ padding: '24px', width: '90%', maxWidth: '400px' }}>
+          <div className="auth-card animate-slide-up" style={{ padding: '24px', width: '90%', maxWidth: '400px' }}>
             <div className="flex-between" style={{ marginBottom: '16px' }}>
               <h3>Create Workspace</h3>
               <button onClick={() => setShowWorkspaceModal(false)} className="btn" style={{ padding: '4px', border: 'none' }}>
@@ -640,7 +627,7 @@ export default function DashboardClient({
       {/* 2. Project Creator Modal */}
       {showProjectModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="auth-card animate-fade-in" style={{ padding: '24px', width: '90%', maxWidth: '400px' }}>
+          <div className="auth-card animate-slide-up" style={{ padding: '24px', width: '90%', maxWidth: '400px' }}>
             <div className="flex-between" style={{ marginBottom: '16px' }}>
               <h3>Create Project</h3>
               <button onClick={() => setShowProjectModal(false)} className="btn" style={{ padding: '4px', border: 'none' }}>
@@ -688,7 +675,7 @@ export default function DashboardClient({
       {/* 3. Task Creator Modal */}
       {showTaskModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="auth-card animate-fade-in" style={{ padding: '24px', width: '90%', maxWidth: '460px' }}>
+          <div className="auth-card animate-slide-up" style={{ padding: '24px', width: '90%', maxWidth: '460px' }}>
             <div className="flex-between" style={{ marginBottom: '16px' }}>
               <h3>Create Task</h3>
               <button onClick={() => setShowTaskModal(false)} className="btn" style={{ padding: '4px', border: 'none' }}>
@@ -790,7 +777,7 @@ export default function DashboardClient({
       {/* 4. Task Editor Modal */}
       {editingTask && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="auth-card animate-fade-in" style={{ padding: '24px', width: '90%', maxWidth: '460px' }}>
+          <div className="auth-card animate-slide-up" style={{ padding: '24px', width: '90%', maxWidth: '460px' }}>
             <div className="flex-between" style={{ marginBottom: '16px' }}>
               <h3>Edit Task</h3>
               <button onClick={() => setEditingTask(null)} className="btn" style={{ padding: '4px', border: 'none' }}>
@@ -874,7 +861,7 @@ export default function DashboardClient({
       {/* 5. Quick-Capture Note Modal */}
       {showQuickNoteModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(1px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="auth-card animate-fade-in" style={{ padding: '24px', width: '90%', maxWidth: '440px' }}>
+          <div className="auth-card animate-slide-up" style={{ padding: '24px', width: '90%', maxWidth: '440px' }}>
             <div className="flex-between" style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Zap size={16} style={{ color: 'var(--tag-text-medium)' }} />
