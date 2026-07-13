@@ -19,7 +19,8 @@ import {
   Check,
   FileText,
   Zap,
-  BarChart2
+  BarChart2,
+  Bot
 } from 'lucide-react'
 import { logout } from '../login/actions'
 import { 
@@ -32,6 +33,7 @@ import {
 import { createNote } from './notes-actions'
 import NotesView from './NotesView'
 import OverviewDashboard from './OverviewDashboard'
+import ChatView from './ChatView'
 
 interface DashboardClientProps {
   user: User
@@ -55,7 +57,7 @@ export default function DashboardClient({
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(
     initialWorkspaces[0]?.id || ''
   )
-  const [currentView, setCurrentView] = useState<'dashboard' | 'tasks' | 'notes'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'tasks' | 'notes' | 'chat'>('dashboard')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all') // 'all' or specific projectId
   
   // Modals
@@ -307,6 +309,13 @@ export default function DashboardClient({
               >
                 <FileText size={15} />
                 <span>Notes ({activeNotes.length})</span>
+              </button>
+              <button
+                onClick={() => setCurrentView('chat')}
+                className={`sidebar-item ${currentView === 'chat' ? 'active' : ''}`}
+              >
+                <Bot size={15} />
+                <span>Chat</span>
               </button>
 
               <button 
@@ -577,6 +586,10 @@ export default function DashboardClient({
                     notes={initialNotes}
                   />
                 </div>
+              )}
+
+              {currentView === 'chat' && (
+                <ChatView workspaceId={activeWorkspaceId} />
               )}
             </>
           )}
@@ -911,3 +924,4 @@ export default function DashboardClient({
     </div>
   )
 }
+
